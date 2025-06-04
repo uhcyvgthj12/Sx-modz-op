@@ -1,0 +1,7 @@
+name = "sx-modz-op"
+main = "worker.js"
+compatibility_date = "2025-02-12"
+
+
+[build]
+format = "modules"
