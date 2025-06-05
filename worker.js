@@ -1,161 +1,269 @@
-addEventListener("fetch", event => {
-  event.respondWith(handleRequest(event.request));
-});
+const BOT_TOKEN = '7672506977:AAGu5iMSWzsMrAL8mh0k5jyu9SD9gN3a5yQ';
+const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
+
+
+// handleRequest by TG: @sumit_coder
 
 async function handleRequest(request) {
-  const TOKEN_BOT = `7672506977:AAGu5iMSWzsMrAL8mh0k5jyu9SD9gN3a5yQ`
-  const TELEGRAM_API_URL = `https://api.telegram.org/bot${TOKEN_BOT}/`;
-  const url = new URL(request.url);
-
-  if (url.pathname === "/webhook") {
-    const payload = await request.json();
-    
-    const chatId = payload.message ? payload.message.chat.id : payload.callback_query.message.chat.id;
-    const text = payload.message ? payload.message.text : null;
-    
-    if (text === "/start") {
-      return sendInlineKeyboard(TELEGRAM_API_URL, chatId);
+    if (request.method === 'POST') {
+        const update = await request.json();
+        return handleUpdate(update);
     }
-
-    if (payload.callback_query) {
-      const selectedModel = payload.callback_query.data;
-      
-      console.log(`User ${chatId} memilih model: ${selectedModel}`);
-      
-      await saveUserModelSelection(chatId, selectedModel);
-      
-      const promptMessage = `Anda memilih ${selectedModel}. Silakan kirim prompt untuk model tersebut.`;
-      return sendMessage(TELEGRAM_API_URL, chatId, promptMessage);
-    }
-
-    const userModel = await getUserModelSelection(chatId);
-    
-    if (userModel) {
-      const prompt = text;
-
-      const models = {
-        "openai": "https://ai.netorare.web.id/?openai=",
-        "openai-large": "https://ai.netorare.web.id/?openai-large=",
-        "openai-reasoning": "https://ai.netorare.web.id/?openai-reasoning=",
-        "qwen-coder": "https://ai.netorare.web.id/?qwen-coder=",
-        "llama": "https://ai.netorare.web.id/?llama=",
-        "mistral": "https://ai.netorare.web.id/?mistral=",
-        "unity": "https://ai.netorare.web.id/?unity=",
-        "midijourney": "https://ai.netorare.web.id/?midijourney=",
-        "rtist": "https://ai.netorare.web.id/?rtist=",
-        "searchgpt": "https://ai.netorare.web.id/?searchgpt=",
-        "evil": "https://ai.netorare.web.id/?evil=",
-        "deepseek": "https://ai.netorare.web.id/?deepseek=",
-        "claude-hybridspace": "https://ai.netorare.web.id/?claude-hybridspace=",
-        "deepseek-r1": "https://ai.netorare.web.id/?deepseek-r1=",
-        "deepseek-reasoner": "https://ai.netorare.web.id/?deepseek-reasoner=",
-        "llamalight": "https://ai.netorare.web.id/?llamalight=",
-        "llamaguard": "https://ai.netorare.web.id/?llamaguard=",
-        "gemini": "https://ai.netorare.web.id/?gemini=",
-        "gemini-thinking": "https://ai.netorare.web.id/?gemini-thinking=",
-        "hormoz": "https://ai.netorare.web.id/?hormoz=",
-        "hypnosis-tracy": "https://ai.netorare.web.id/?hypnosis-tracy=",
-        "sur": "https://ai.netorare.web.id/?sur=",
-        "sur-mistral": "https://ai.netorare.web.id/?sur-mistral=",
-        "llama-scaleway": "https://ai.netorare.web.id/?llama-scaleway="
-      };
-
-      if (models[userModel]) {
-        const apiUrl = `${models[userModel]}${encodeURIComponent(prompt)}`;
-        try {
-          const response = await fetch(apiUrl);
-          const data = await response.text();
-          return sendMessage(TELEGRAM_API_URL, chatId, data);
-        } catch (error) {
-          console.log(error); 
-          return sendMessage(TELEGRAM_API_URL, chatId, "Gagal mengambil data dari model yang dipilih.");
-        }
-      } else {
-        return sendMessage(TELEGRAM_API_URL, chatId, "Model yang dipilih tidak valid.");
-      }
-    } else {
-      return sendMessage(TELEGRAM_API_URL, chatId, "Anda belum memilih model. Silakan pilih model terlebih dahulu.");
-    }
-  }
-
-  return new Response("Not Found", { status: 404 });
+    return new Response('OK');
 }
 
-async function sendInlineKeyboard(apiUrl, chatId) {
-  const inlineKeyboard = {
-    inline_keyboard: [
-      [
-        { text: "OpenAI GPT-4o-mini", callback_data: "openai" },
-        { text: "OpenAI GPT-4o", callback_data: "openai-large" }
-      ],
-      [
-        { text: "OpenAI o1-mini", callback_data: "openai-reasoning" },
-        { text: "Qwen 2.5 Coder 32B", callback_data: "qwen-coder" }
-      ],
-      [
-        { text: "Llama 3.3 70B", callback_data: "llama" },
-        { text: "Mistral Nemo", callback_data: "mistral" }
-      ],
-      [
-        { text: "Unity with Mistral Large", callback_data: "unity" },
-        { text: "Midijourney musical transformer", callback_data: "midijourney" }
-      ],
-      [
-        { text: "Rtist information generator", callback_data: "rtist" },
-        { text: "SearchGPT realtime news", callback_data: "searchgpt" }
-      ],
-      [
-        { text: "Evil Mode - Experimental", callback_data: "evil" },
-        { text: "DeepSeek-V3", callback_data: "deepseek" }
-      ],
-      [
-        { text: "Claude Hybridspace", callback_data: "claude-hybridspace" },
-        { text: "DeepSeek-R1 Distill Qwen 32B", callback_data: "deepseek-r1" }
-      ],
-      [
-        { text: "DeepSeek R1 - Full", callback_data: "deepseek-reasoner" },
-        { text: "Llama 3.1 8B Instruct", callback_data: "llamalight" }
-      ],
-      [
-        { text: "Llamaguard 7B AWQ", callback_data: "llamaguard" },
-        { text: "Gemini 2.0 Flash", callback_data: "gemini" }
-      ],
-      [
-        { text: "Gemini 2.0 Flash Thinking", callback_data: "gemini-thinking" },
-        { text: "Hormoz 8b", callback_data: "hormoz" }
-      ],
-      [
-        { text: "Hypnosis Tracy - Self-Help AI", callback_data: "hypnosis-tracy" },
-        { text: "Sur AI Assistant", callback_data: "sur" }
-      ],
-      [
-        { text: "Sur AI Assistant (Mistral)", callback_data: "sur-mistral" },
-        { text: "Llama (Scaleway)", callback_data: "llama-scaleway" }
-      ]
-    ]
-  };
+// handleUpdate by TG: @sumit_coder
 
-  const url = `${apiUrl}sendMessage?chat_id=${chatId}&text=Silakan pilih model:&reply_markup=${encodeURIComponent(JSON.stringify(inlineKeyboard))}`;
-  const response = await fetch(url);
-  return new Response(await response.text(), { status: response.status });
-}
-
-async function sendMessage(apiUrl, chatId, message) {
-  const watermark = "\n\n[Made with ❤️ by Sonzai X シ](https://t.me/November2k)";
-  const fullMessage = `${message}${watermark}`;
-  
-  const url = `${apiUrl}sendMessage?chat_id=${chatId}&text=${encodeURIComponent(fullMessage)}&parse_mode=Markdown&disable_web_page_preview=true`;
-  const response = await fetch(url);
-  return new Response(await response.text(), { status: response.status });
-}
-
-async function saveUserModelSelection(userId, model) {
-  console.log(`Menyimpan model ${model} untuk user ${userId}`);
-  await MODEL_SELECTION.put(userId.toString(), model); 
-}
-
-async function getUserModelSelection(userId) {
-  const model = await MODEL_SELECTION.get(userId.toString());
-  return model;
-}
+async function handleUpdate(update) {
+    if (update.callback_query) {
+        const data = update.callback_query.data;
+        const chatId = update.callback_query.message.chat.id;
+        const messageId = update.callback_query.message.message_id;
         
+        if (data === '/Commands') {
+            await deleteMessage(chatId, messageId);
+            await sendCommandsMenu(chatId);
+        }
+        return new Response('OK');
+    }
+
+    if (update.message) {
+        const text = update.message.text;
+        const chatId = update.message.chat.id;
+        const user = update.message.from;
+
+        if (text === '/start') {
+            await sendWelcomeMessage(chatId, user);
+        }
+        else if (text === '/Commands') {
+            await deleteMessage(chatId, update.message.message_id);
+            await sendCommandsMenu(chatId);
+        }
+        else if (text === '/about') {
+            await sendAboutMessage(chatId, user);
+        }
+        else if (text === '🌺 video') {
+            await sendVbMenu(chatId);
+        }
+        else if (text === '/info') {
+            await sendUserInfo(chatId, user);
+        }
+        else if (text === '🌺 video1') {
+            await sendVideo1(chatId);
+        }
+        return new Response('OK');
+    }
+
+    return new Response('OK');
+}
+
+// WelcomeMessage by TG: @sumit_coder
+
+async function sendWelcomeMessage(chatId, user) {
+    const videoUrl = "https://t.me/kajal_developer/57";
+    const buttons = [
+        [{ text: "menu", callback_data: "/Commands" }],
+        [{ text: "DEV", url: "https://t.me/pornhub_Developer" }]
+    ];
+
+    const caption = `<b>👋 Welcome Back ${user.first_name}</b>\n\n🌥️ Bot Status: Alive 🟢\n\n💞 Dev: @pornhub_Developer`;
+
+    await fetch(`${API_URL}/sendVideo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            video: videoUrl,
+            caption: caption,
+            parse_mode: 'HTML',
+            reply_markup: { inline_keyboard: buttons },
+            protect_content: true
+        })
+    });
+}
+
+// CommandsMenu by TG: @sumit_coder
+
+async function sendCommandsMenu(chatId) {
+    const videoUrl = "https://t.me/kajal_developer/57"; 
+    const buttons = [
+        [
+            { text: "video 🌏", callback_data: "Video1" },
+            { text: "Tools", callback_data: "/tools" }
+        ],
+        [
+            { text: "Channel", url: "https://t.me/pornhub_Developer" },
+            { text: "DEV", url: "https://t.me/pornhub_Developer" }
+        ],
+        [
+            { text: "◀️ Go Back", callback_data: "/start" }
+        ]
+    ];
+
+    const caption = `<b>[𖤐] XS :</b>\n\n<b>[ϟ] video Tools :</b>\n\n<b>[ᛟ] video - 0</b>\n<b>[ᛟ] video - 0</b>\n<b>[ᛟ] Tools - 2</b>`;
+
+    await fetch(`${API_URL}/sendVideo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            video: videoUrl,
+            caption: caption,
+            parse_mode: 'HTML',
+            reply_markup: { inline_keyboard: buttons },
+            protect_content: true
+        })
+    });
+}
+
+// deleteMessage by TG: @sumit_coder
+
+async function deleteMessage(chatId, messageId) {
+    await fetch(`${BASE_URL}/deleteMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            protect_content: true
+        })
+    });
+}
+
+// aboutMessage by TG: @sumit_coder
+
+async function sendAboutMessage(chatId, user) {
+    const aboutMessage = `
+<b><blockquote>⍟───[ MY ᴅᴇᴛᴀɪʟꜱ ]───⍟</blockquote>
+
+‣ ᴍʏ ɴᴀᴍᴇ : <a href="https://t.me/${user.username}">${user.first_name}</a>
+‣ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a> 
+‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href='https://t.me/sumit_developer'>💫 Sx</a> 
+‣ ʟɪʙʀᴀʀʏ : <a href='Cloudflare.com'>Cloudflare</a> 
+‣ ʟᴀɴɢᴜᴀɢᴇ : <a href='JS 💻'>JS 💻</a> 
+‣ ᴅᴀᴛᴀ ʙᴀsᴇ : <a href='Cloudflare.com'>Cloudflare</a> 
+‣ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='ᴄʟᴏᴜᴅғʟᴀʀᴇ ⚡'>ᴄʟᴏᴜᴅғʟᴀʀᴇ ⚡</a> 
+‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : v1.0 [sᴛᴀʙʟᴇ]</b>
+    `;
+
+    await fetch(`${API_URL}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: aboutMessage,
+            parse_mode: 'HTML',
+            protect_content: true
+        })
+    });
+}
+
+// VbMenu by TG: @sumit_coder
+
+async function sendVbMenu(chatId) {
+    const keyboard = {
+        keyboard: [
+            ["🌺 CP", "🇮🇳 Desi"],
+            ["🇬🇧 Forener", "🐕‍🦺 Animal"],
+            ["💕 Webseries", "💑 Gay Cp"],
+            ["💸 𝘽𝙐𝙔 𝙑𝙄𝙋 💸"]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: true
+    };
+
+    await fetch(`${API_URL}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: "🤗 Welcome to Lx Bot 🌺",
+            reply_markup: keyboard,
+            protect_content: true
+        })
+    });
+}
+
+// UserInfo by TG: @sumit_coder
+
+async function sendUserInfo(chatId, user) {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    const username = user.username ? `@${user.username}` : 'None';
+    const userLink = user.username ? `https://t.me/${user.username}` : 'None';
+    const phoneNumber = user.phone_number ? user.phone_number : '!';
+    
+    const infoMessage = `
+<code>○➲ ɪᴅ: ${user.id}
+➲ ᴅᴄ_ɪᴅ: N/A
+➲ ꜰɪʀꜱᴛ ɴᴀᴍᴇ: ${escapeHtml(user.first_name || 'None')}
+➲ ʟᴀꜱᴛ ɴᴀᴍᴇ: ${escapeHtml(user.last_name || 'None')}
+➲ ꜰᴜʟʟ ɴᴀᴍᴇ: ${escapeHtml(fullName)}
+➲ ᴜꜱᴇʀɴᴀᴍᴇ: ${username}
+➲ ɪꜱ_ᴠᴇʀɪꜰɪᴇᴅ: ${user.is_verified ? 'Yes' : 'No'}
+➲ ɪꜱ_ʀᴇꜱᴛʀɪᴄᴛᴇᴅ: ${user.is_restricted ? 'Yes' : 'No'}
+➲ ɪꜱ_ꜱᴄᴀᴍ: ${user.is_scam ? 'Yes' : 'No'}
+➲ ɪꜱ_ꜰᴀᴋᴇ: ${user.is_fake ? 'Yes' : 'No'}
+➲ ɪꜱ_ᴩʀᴇᴍɪᴜᴍ: ${user.is_premium ? 'Yes' : 'No'}
+➲ ᴍᴇɴᴛɪᴏɴ: <a href="${userLink}">${username}</a>
+➲ ʟɪɴᴋ : <a href="${userLink}">${userLink}</a>
+➲ ᴩʜᴏɴᴇ ɴᴏ: ${phoneNumber}</code>
+    `;
+
+    await fetch(`${BASE_URL}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: infoMessage,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+        })
+    });
+}
+
+// Video1 by TG: @sumit_coder
+
+async function sendVideo1(chatId) {
+    const videoUrls = [
+        "https://t.me/igftcd/7",
+        "https://t.me/igftcd/8",
+        "https://t.me/igftcd/9",
+        "https://t.me/igftcd/10",
+        "https://t.me/igftcd/12?single",
+        "https://example.com/photo6.jpg",
+        "https://example.com/photo7.jpg",
+        "https://example.com/photo8.jpg",
+        "https://example.com/photo9.jpg",
+        "https://example.com/photo10.jpg",
+        "https://example.com/photo11.jpg",
+        "https://example.com/photo12.jpg"
+    ];
+
+    const channelName = "pornhub_Developer"; // Replace with your channel username
+    const buttons = [
+        [
+            {
+                text: "Join " + channelName,
+                url: "https://t.me/" + channelName
+            }
+        ]
+    ];
+
+    for (let i = 0; i < videoUrls.length; i++) {
+        await fetch(`${API_URL}/sendVideo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                video: videoUrls[i],
+                reply_markup: { inline_keyboard: buttons }
+            })
+        });
+    }
+}
+
+// fetch by TG: @sumit_coder
+
+addEventListener('fetch', event => {
+    event.respondWith(handleRequest(event.request));
+});
